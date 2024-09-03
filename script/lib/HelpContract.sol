@@ -9,12 +9,11 @@ pragma solidity ^0.8.0;
 /******************************************************************************/
 
 import "../../lib/solidity-stringutils/strings.sol";
-import "../../src/interfaces/IDiamond.sol";
+import "../../src/interfaces/IDiamondCut.sol";
 import "../../src/interfaces/IDiamondLoupe.sol";
 import "../../lib/forge-std/src/Test.sol";
 
-
-abstract contract HelperContract is IDiamond, IDiamondLoupe, Test{
+abstract contract HelperContract is IDiamondCut, IDiamondLoupe, Test{
     using strings for *;
 
     // return array of function selectors for given facet name
