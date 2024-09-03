@@ -43,12 +43,16 @@ contract DiamondScript is Script {
         console.log("sender", vm.addr(deployerPrivateKey));
         address owner = vm.addr(deployerPrivateKey);
 
+        // deploy diamond cut facet
         diamondCutFacet = new DiamondCutFacet();
 
+        // deploy diamond
         diamond = new Diamond(owner, address(diamondCutFacet));
 
+        // deploy diamond init
         diamondInit = new DiamondInit();
 
+        // deploy facets
         diamondLoupeFacet = new DiamondLoupeFacet();
         ownershipFacet = new OwnershipFacet();
            
