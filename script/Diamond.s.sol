@@ -8,9 +8,8 @@ import {DiamondInit} from "../src/upgradeInitializers/DiamondInit.sol";
 import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "../src/facets/OwnershipFacet.sol";
 import {IDiamondCut} from "../src/interfaces/IDiamondCut.sol";
-import "./lib/HelpContract.sol";
 
-contract DiamondScript is Script, HelperContract {
+contract DiamondScript is Script {
     Diamond public diamond;
     DiamondCutFacet public diamondCutFacet;
     DiamondInit public diamondInit;
@@ -20,6 +19,20 @@ contract DiamondScript is Script, HelperContract {
     ];
     DiamondLoupeFacet public diamondLoupeFacet;
     OwnershipFacet public ownershipFacet;
+
+    IDiamondCut.FacetCut[] facetCuts;
+    bytes4[] private loupeFacetSelectors = [
+        DiamondLoupeFacet.facets.selector,
+        DiamondLoupeFacet.facetFunctionSelectors.selector,
+        DiamondLoupeFacet.facetAddresses.selector,
+        DiamondLoupeFacet.facetAddress.selector,
+        DiamondLoupeFacet.supportsInterface.selector
+    ];
+
+    bytes4[] private ownershipFacetSelectors = [
+        OwnershipFacet.transferOwnership.selector,
+        OwnershipFacet.owner.selector
+    ];
 
     function setUp() public {}
 
@@ -32,28 +45,38 @@ contract DiamondScript is Script, HelperContract {
 
         diamondCutFacet = new DiamondCutFacet();
 
+        diamond = new Diamond(owner, address(diamondCutFacet));
+
         diamondInit = new DiamondInit();
 
         diamondLoupeFacet = new DiamondLoupeFacet();
         ownershipFacet = new OwnershipFacet();
-
-        FacetCut[] memory cut = new FacetCut[](2);
-        cut[0] = (
-            FacetCut({
+           
+        facetCuts.push(IDiamondCut.FacetCut({
             facetAddress: address(diamondLoupeFacet),
-            action: FacetCutAction.Add,
-            functionSelectors: generateSelectors("DiamondLoupeFacet")
-            })
-        );
-        cut[1] = (
-            FacetCut({
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: loupeFacetSelectors
+        }));
+
+        facetCuts.push(IDiamondCut.FacetCut({
             facetAddress: address(ownershipFacet),
-            action: FacetCutAction.Add,
-            functionSelectors: generateSelectors("OwnershipFacet")
-            })
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: ownershipFacetSelectors
+        }));
+
+        // upgrading Diamond with facet cuts
+        // then call to DiamondInit.init()
+        (bool success, ) = address(diamond).call(
+            abi.encodeWithSelector(
+                IDiamondCut.diamondCut.selector,
+                facetCuts,
+                address(diamondInit),
+                abi.encode(DiamondInit.init.selector)
+            )
         );
-        diamond = new Diamond(owner, address(diamondCutFacet));
-        
+
+        require(success, "DEPLOY :: DIAMOND_UPGRADE_ERROR");
+
         vm.stopBroadcast();
     }
 }
